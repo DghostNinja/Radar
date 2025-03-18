@@ -32,7 +32,7 @@ def scrape_bbradar():
     
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Debugging: Print HTML structure if parsing fails
+    # Debugging: Save the HTML to inspect structure
     with open("bbradar_debug.html", "w", encoding="utf-8") as debug_file:
         debug_file.write(soup.prettify())
 
@@ -44,7 +44,6 @@ def scrape_bbradar():
             title = bounty.find("h3").text.strip() if bounty.find("h3") else "Unknown"
             platform = bounty.find("span", class_="bounty-platform").text.strip() if bounty.find("span", class_="bounty-platform") else "Unknown"
             reward_text = bounty.find("span", class_="bounty-reward").text.strip() if bounty.find("span", class_="bounty-reward") else "$0"
-            scope = bounty.find("span", class_="bounty-scope").text.strip() if bounty.find("span", class_="bounty-scope") else "Unknown"
             link = bounty.find("a", class_="bounty-link")["href"] if bounty.find("a", class_="bounty-link") else "#"
 
             # Convert reward range to max number
@@ -52,17 +51,11 @@ def scrape_bbradar():
             max_reward = max(reward) if reward else 0
 
             # Filtering conditions
-            if any(keyword in title.lower() for keyword in ["fintech", "healthcare"]) and \
-               any(platform.lower() in bounty_platform for bounty_platform in ["yeswehack", "bugcrowd", "intigriti"]) and \
-               "vdp" not in title.lower() and \
-               max_reward >= 1000 and \
-               any(scope_keyword in scope.lower() for scope_keyword in ["api", "web"]):
-                
+            if platform.lower() in ["yeswehack", "bugcrowd", "intigriti"] and max_reward >= 100:
                 programs.append({
                     "title": title,
                     "platform": platform,
                     "reward": max_reward,
-                    "scope": scope,
                     "link": link
                 })
         except Exception as e:
@@ -95,7 +88,6 @@ if __name__ == "__main__":
                           f"*Title:* {program['title']}\n" \
                           f"*Platform:* {program['platform']}\n" \
                           f"*Reward:* ${program['reward']} for critical\n" \
-                          f"*Scope:* {program['scope']}\n" \
                           f"*Link:* [View Program]({program['link']})"
                 
                 send_telegram_message(message)
