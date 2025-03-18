@@ -7,6 +7,12 @@ from bs4 import BeautifulSoup
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# Excluded high-competition companies
+EXCLUDED_COMPANIES = ["google", "microsoft", "paypal", "apple", "meta", "amazon"]
+
+# Target platforms (to reduce competition)
+TARGET_PLATFORMS = ["yeswehack", "intigriti", "bugcrowd"]
+
 # Function to send Telegram notification
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -42,7 +48,7 @@ def scrape_bbradar():
     for bounty in soup.find_all("div", class_="bounty-card"):  # Adjust class name if needed
         try:
             title = bounty.find("h3").text.strip() if bounty.find("h3") else "Unknown"
-            platform = bounty.find("span", class_="bounty-platform").text.strip() if bounty.find("span", class_="bounty-platform") else "Unknown"
+            platform = bounty.find("span", class_="bounty-platform").text.strip().lower() if bounty.find("span", class_="bounty-platform") else "Unknown"
             reward_text = bounty.find("span", class_="bounty-reward").text.strip() if bounty.find("span", class_="bounty-reward") else "$0"
             link = bounty.find("a", class_="bounty-link")["href"] if bounty.find("a", class_="bounty-link") else "#"
 
@@ -50,14 +56,25 @@ def scrape_bbradar():
             reward = [int(s.replace("$", "").replace(",", "")) for s in reward_text.split("-") if s.replace("$", "").replace(",", "").isdigit()]
             max_reward = max(reward) if reward else 0
 
-            # Filtering conditions
-            if platform.lower() in ["yeswehack", "bugcrowd", "intigriti"] and max_reward >= 100:
-                programs.append({
-                    "title": title,
-                    "platform": platform,
-                    "reward": max_reward,
-                    "link": link
-                })
+            # Exclude high-competition companies
+            if any(company in title.lower() for company in EXCLUDED_COMPANIES):
+                continue
+
+            # Exclude non-targeted platforms
+            if platform not in TARGET_PLATFORMS:
+                continue
+            
+            # Skip programs with very low or very high rewards
+            if max_reward < 100 or max_reward > 150:
+                continue
+
+            # Append filtered results
+            programs.append({
+                "title": title,
+                "platform": platform,
+                "reward": max_reward,
+                "link": link
+            })
         except Exception as e:
             print(f"⚠️ Error parsing bounty: {e}")
 
